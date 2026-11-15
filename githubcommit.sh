@@ -57,9 +57,9 @@ print_message "34" "Step 3: Please provide your repository details."
 GITHUB_USER="$(gh api user --jq .login)"
 printf 'Authenticated GitHub account: %s\n' "$GITHUB_USER"
 
-read -p "Enter the desired repository name for this project: " REPO_NAME
+read -r -p "Enter the desired repository name for this project: " REPO_NAME
 while [[ -z "$REPO_NAME" ]]; do
-  read -p "Repository name cannot be empty. Please enter a name: " REPO_NAME
+  read -r -p "Repository name cannot be empty. Please enter a name: " REPO_NAME
 done
 
 # --- Step 4: Initialize Git Repository ---
@@ -77,9 +77,9 @@ print_message "34" "Step 4.5: Checking Git user configuration..."
 # Check if user.name is configured
 if [[ -z "$(git config user.name)" ]]; then
     print_message "33" "Git user name is not set."
-    read -p "Please enter your full name (for Git commits): " GIT_USER_NAME
+    read -r -p "Please enter your full name (for Git commits): " GIT_USER_NAME
     while [[ -z "$GIT_USER_NAME" ]]; do
-      read -p "Name cannot be empty. Please enter your full name: " GIT_USER_NAME
+      read -r -p "Name cannot be empty. Please enter your full name: " GIT_USER_NAME
     done
     git config user.name "$GIT_USER_NAME"
     print_message "32" "Git user name set to '$GIT_USER_NAME' for this repository."
@@ -88,9 +88,9 @@ fi
 # Check if user.email is configured
 if [[ -z "$(git config user.email)" ]]; then
     print_message "33" "Git user email is not set."
-    read -p "Please enter your email address (for Git commits): " GIT_USER_EMAIL
+    read -r -p "Please enter your email address (for Git commits): " GIT_USER_EMAIL
     while [[ -z "$GIT_USER_EMAIL" ]]; do
-      read -p "Email cannot be empty. Please enter your email address: " GIT_USER_EMAIL
+      read -r -p "Email cannot be empty. Please enter your email address: " GIT_USER_EMAIL
     done
     git config user.email "$GIT_USER_EMAIL"
     print_message "32" "Git user email set to '$GIT_USER_EMAIL' for this repository."

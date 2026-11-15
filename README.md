@@ -25,18 +25,18 @@
 
 ## About
 
-`push_to_github.sh` is a fire-and-forget solution for initializing a project on GitHub, handling everything from dependency checks to the final push. It simplifies the repetitive process of setting up a new repository, making it perfect for developers who want to get their code on GitHub quickly and without manual steps.
+`githubcommit.sh` is an interactive helper for preparing a local Git repository and pushing it to GitHub. It checks prerequisites and authentication, asks for a repository name, stages changes, and creates or pushes to the selected repository. Review the target and staged files before running it.
 
 ## ✨ Features
 
 | Feature | Description |
 |---------|-------------|
-| **Fully Autonomous** | Requires zero manual configuration outside of running the script. |
+| **Interactive workflow** | Confirms repository details and visibility before creating a repository. |
 | **Dependency Checks** | Automatically verifies if git and the GitHub CLI (gh) are installed. |
 | **Auto-Installation** | If the GitHub CLI (gh) is not found, it attempts to install it using the system's package manager (supports macOS via Homebrew, and Debian/Ubuntu/Fedora/CentOS on Linux). |
 | **Authentication Handling** | Checks if you're logged into GitHub and prompts you to log in if you aren't. |
 | **Git Identity Setup** | If your local Git user.name and user.email are not configured, it will ask for them and set them for the current repository. |
-| **Smart Repository Handling** | Creates a new public repository on your GitHub account if one doesn't exist, or pushes to an existing repository if a repository with the same name is found. |
+| **Safe repository handling** | New repositories default to private; existing repositories are pushed without force. |
 | **Effortless Commits** | Automatically adds all project files and creates an initial commit. |
 | **User-Friendly** | Provides clear, colored output for each step of the process. |
 
@@ -53,7 +53,7 @@ Getting started is as simple as running the script in your project's root direct
 ### Usage
 
 1. **Download the Script**:
-   Save the script in your project's root directory as `push_to_github.sh`.
+   Save the script in your project's root directory as `githubcommit.sh`.
 
 2. **Make it Executable**:
    Open your terminal, navigate to your project directory, and run the following command to give the script execution permissions:
@@ -64,10 +64,10 @@ Getting started is as simple as running the script in your project's root direct
 3. **Run the Script**:
    Execute the script from your project's root directory. Do not use `sudo`.
    ```bash
-   ./push_to_github.sh
+   ./githubcommit.sh
    ```
 
-The script will then guide you through the process, asking for your GitHub username, desired repository name, and Git identity if needed.
+The script uses the account already authenticated in GitHub CLI, asks for a repository name and Git identity if needed, and asks whether a new repository should be private or public (private is the default).
 
 ## ⚙️ How It Works
 
@@ -75,7 +75,7 @@ The script performs the following steps in order:
 
 1. **Checks for Git and GitHub CLI (gh)**: Ensures the necessary tools are available.
 2. **Authenticates with GitHub**: Uses `gh auth status` to verify your login session.
-3. **Collects Repository Info**: Prompts you for your GitHub username and the new repository's name.
+3. **Collects Repository Info**: Reads the authenticated GitHub username and prompts for a repository name.
 4. **Initializes Git**: Runs `git init` if the project is not already a Git repository.
 5. **Configures Git Identity**: Checks `git config` and prompts for your name and email if they are not set.
 6. **Commits Files**: Stages all files with `git add .` and creates a commit.

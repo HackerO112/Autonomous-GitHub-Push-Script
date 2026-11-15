@@ -24,7 +24,7 @@ print_message() {
 }
 
 # Exit immediately if any command fails.
-set -e
+set -Eeuo pipefail
 
 # --- Step 1: Check Prerequisites ---
 print_message "34" "Step 1: Checking for Git and GitHub CLI..."
@@ -54,14 +54,12 @@ fi
 
 # --- Step 3: Get User Input ---
 print_message "34" "Step 3: Please provide your repository details."
-read -p "Enter your GitHub username: " GITHUB_USER
-while [[ -z "$GITHUB_USER" ]]; do
-  read -p "Username cannot be empty. Please enter your GitHub username: " GITHUB_USER
-done
+GITHUB_USER="$(gh api user --jq .login)"
+printf 'Authenticated GitHub account: %s\n' "$GITHUB_USER"
 
-read -p "Enter the desired repository name for this project: " REPO_NAME
+read -r -p "Enter the desired repository name for this project: " REPO_NAME
 while [[ -z "$REPO_NAME" ]]; do
-  read -p "Repository name cannot be empty. Please enter a name: " REPO_NAME
+  read -r -p "Repository name cannot be empty. Please enter a name: " REPO_NAME
 done
 
 # --- Step 4: Initialize Git Repository ---
@@ -79,9 +77,9 @@ print_message "34" "Step 4.5: Checking Git user configuration..."
 # Check if user.name is configured
 if [[ -z "$(git config user.name)" ]]; then
     print_message "33" "Git user name is not set."
-    read -p "Please enter your full name (for Git commits): " GIT_USER_NAME
+    read -r -p "Please enter your full name (for Git commits): " GIT_USER_NAME
     while [[ -z "$GIT_USER_NAME" ]]; do
-      read -p "Name cannot be empty. Please enter your full name: " GIT_USER_NAME
+      read -r -p "Name cannot be empty. Please enter your full name: " GIT_USER_NAME
     done
     git config user.name "$GIT_USER_NAME"
     print_message "32" "Git user name set to '$GIT_USER_NAME' for this repository."
@@ -90,9 +88,9 @@ fi
 # Check if user.email is configured
 if [[ -z "$(git config user.email)" ]]; then
     print_message "33" "Git user email is not set."
-    read -p "Please enter your email address (for Git commits): " GIT_USER_EMAIL
+    read -r -p "Please enter your email address (for Git commits): " GIT_USER_EMAIL
     while [[ -z "$GIT_USER_EMAIL" ]]; do
-      read -p "Email cannot be empty. Please enter your email address: " GIT_USER_EMAIL
+      read -r -p "Email cannot be empty. Please enter your email address: " GIT_USER_EMAIL
     done
     git config user.email "$GIT_USER_EMAIL"
     print_message "32" "Git user email set to '$GIT_USER_EMAIL' for this repository."
@@ -103,12 +101,36 @@ print_message "32" "Git user identity is configured."
 
 # --- Step 5: Add and Commit Files ---
 print_message "34" "Step 5: Preparing files for commit..."
-git add .
+git add -A
 
-if git diff --staged --quiet; then
+# Refuse common credential/private-key files before committing.
+while IFS= read -r -d '' staged_path; do
+  case "$staged_path" in
+    .env|.env.*)
+      case "$staged_path" in
+        .env.example|.env.sample|.env.template) continue ;;
+        *) print_message "31" "Potential secret file staged: $staged_path. Remove it from the index and add it to .gitignore before continuing."; exit 1 ;;
+      esac
+      ;;
+    *credentials*|*secret*|*.pem|*.p12|*.pfx|id_rsa|id_ed25519)
+      print_message "31" "Potential secret file staged: $staged_path. Remove it from the index and add it to .gitignore before continuing."
+      exit 1
+      ;;
+  esac
+done < <(git diff --cached --name-only -z)
+
+if git diff --cached --quiet; then
     print_message "33" "No new changes to commit. Proceeding to push."
 else
-    print_message "34" "--> Committing all files..."
+    print_message "34" "Review the files selected for commit:"
+    git diff --cached --stat
+    git diff --cached --name-only
+    read -r -p "Commit these files? [y/N]: " CONFIRM_COMMIT
+    if [[ ! "$CONFIRM_COMMIT" =~ ^[Yy]$ ]]; then
+      print_message "33" "Commit cancelled. Your staged changes have been left untouched."
+      exit 0
+    fi
+    print_message "34" "--> Committing reviewed files..."
     git commit -m "Initial commit: Add project files"
     print_message "32" "Files committed."
 fi
@@ -120,12 +142,17 @@ if gh repo view "$GITHUB_USER/$REPO_NAME" >/dev/null 2>&1; then
     print_message "34" "--> Pushing to existing repository..."
     git remote rm origin 2>/dev/null || true # Remove old remote if it exists
     git remote add origin "https://github.com/$GITHUB_USER/$REPO_NAME.git"
-    git push --set-upstream origin main -f # Use -f to force push over existing history if needed
+    git push --set-upstream origin main
 else
-    print_message "34" "--> Creating new public repository '$GITHUB_USER/$REPO_NAME'..."
-    # Proactively remove any existing 'origin' remote to prevent conflicts
+    read -r -p "Repository visibility [private/public] (default private): " REPO_VISIBILITY
+    REPO_VISIBILITY="${REPO_VISIBILITY:-private}"
+    if [[ "$REPO_VISIBILITY" != "private" && "$REPO_VISIBILITY" != "public" ]]; then
+      print_message "31" "Invalid visibility. Choose private or public."
+      exit 1
+    fi
+    print_message "34" "--> Creating $REPO_VISIBILITY repository '$GITHUB_USER/$REPO_NAME'..."
     git remote rm origin 2>/dev/null || true
-    gh repo create "$GITHUB_USER/$REPO_NAME" --public --source=. --remote=origin --push
+    gh repo create "$GITHUB_USER/$REPO_NAME" "--$REPO_VISIBILITY" --source=. --remote=origin --push
 fi
 
 print_message "32" "🚀 Success! Your code has been pushed to GitHub."

@@ -106,7 +106,13 @@ git add -A
 # Refuse common credential/private-key files before committing.
 while IFS= read -r -d '' staged_path; do
   case "$staged_path" in
-    .env|.env.*|!.env.example|!.env.sample|!.env.template|*credentials*|*secret*|*.pem|*.p12|*.pfx|id_rsa|id_ed25519)
+    .env|.env.*)
+      case "$staged_path" in
+        .env.example|.env.sample|.env.template) continue ;;
+        *) print_message "31" "Potential secret file staged: $staged_path. Remove it from the index and add it to .gitignore before continuing."; exit 1 ;;
+      esac
+      ;;
+    *credentials*|*secret*|*.pem|*.p12|*.pfx|id_rsa|id_ed25519)
       print_message "31" "Potential secret file staged: $staged_path. Remove it from the index and add it to .gitignore before continuing."
       exit 1
       ;;

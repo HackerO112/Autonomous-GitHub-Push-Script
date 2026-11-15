@@ -119,10 +119,18 @@ while IFS= read -r -d '' staged_path; do
   esac
 done < <(git diff --cached --name-only -z)
 
-if git diff --staged --quiet; then
+if git diff --cached --quiet; then
     print_message "33" "No new changes to commit. Proceeding to push."
 else
-    print_message "34" "--> Committing all files..."
+    print_message "34" "Review the files selected for commit:"
+    git diff --cached --stat
+    git diff --cached --name-only
+    read -r -p "Commit these files? [y/N]: " CONFIRM_COMMIT
+    if [[ ! "$CONFIRM_COMMIT" =~ ^[Yy]$ ]]; then
+      print_message "33" "Commit cancelled. Your staged changes have been left untouched."
+      exit 0
+    fi
+    print_message "34" "--> Committing reviewed files..."
     git commit -m "Initial commit: Add project files"
     print_message "32" "Files committed."
 fi
